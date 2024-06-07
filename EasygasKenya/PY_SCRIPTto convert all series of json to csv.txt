@@ -1,0 +1,85 @@
+#This python script converts all the 28json files into csv files.
+
+import json
+import os
+from google.colab import files
+
+# Initialize a list to store DataFrames
+all_dfs = []
+
+# List of JSON files
+json_files = [f"{i}.json" for i in range(1, 29)]  # Adjust range according to the number of JSON files
+
+for json_file in json_files:
+    with open(os.path.join(json_dir, json_file), 'r') as file:
+        data = json.load(file)
+
+    # Initialize lists to store preprocessed data
+    rows = []
+
+    # Get maximum number of elements in dimensionValues and metricValues
+    max_dimension_values = max(len(row['dimensionValues']) for row in data['rows'])
+    max_metric_values = max(len(row['metricValues']) for row in data['rows'])
+
+    # Preprocess each row
+    for row in data['rows']:
+        # Pad dimensionValues and metricValues to have the same length
+        dimension_values = [dim_value['value'] for dim_value in row['dimensionValues']]
+        metric_values = [metric['value'] for metric in row['metricValues']]
+        dimension_values += [''] * (max_dimension_values - len(dimension_values))
+        metric_values += [''] * (max_metric_values - len(metric_values))
+
+        # Add preprocessed row to the list
+        rows.append(dimension_values + metric_values)
+
+    # Define column names based on dimensionHeaders and metricHeaders
+    dimension_names = [header['name'] for header in data['dimensionHeaders']]
+    metric_names = [header['name'] for header in data['metricHeaders']]
+    column_names = dimension_names + metric_names
+
+    # Create DataFrame
+    df = pd.DataFrame(rows, columns=column_names)
+
+    # Reorder the columns if necessary
+    if set(['customUser:user_Id','date','unifiedScreenName', 'screenPageViews', 'totalUsers', 'screenPageViewsPerUser', 'userEngagementDuration']).issubset(df.columns):
+        df = df[['customUser:user_Id','date','unifiedScreenName', 'screenPageViews', 'totalUsers', 'screenPageViewsPerUser', 'userEngagementDuration']]
+    else:
+        # Handle cases where some columns might be missing
+        df = df[[col for col in ['customUser:user_Id','date','unifiedScreenName', 'screenPageViews', 'totalUsers', 'screenPageViewsPerUser', 'userEngagementDuration'] if col in df.columns]]
+
+    # Append the DataFrame to the list
+    all_dfs.append(df)
+
+# Concatenate all DataFrames
+final_df = pd.concat(all_dfs, ignore_index=True)
+
+# Save the final DataFrame to a CSV file
+final_csv_path = "/content/Final_LAVKENYASCREENS_CSV.csv"
+final_df.to_csv(final_csv_path, index=False)
+
+# Provide a link for downloading the CSV file
+files.download(final_csv_path)
+
+#filtering the columns,which re necessary
+desired_values = ['/DashboardScreen', '/ChoosePayment', '/LoginScreen', '/CartScreen',
+                   '/ProductListing', '/ProductDetails', '/OffersListPage','/OnboardingScreen']
+
+filtered_df = df1[df1['unifiedScreenName'].isin(desired_values)]
+
+filtered_df
+filtered_df.columns
+def get_column_names_and_unique_values(df):
+  column_values = {}
+  column_values['unifiedScreenName'] = df['unifiedScreenName'].unique().tolist()
+  return column_values
+
+column_values = get_column_names_and_unique_values(filtered_df)
+column_values
+
+from google.colab import files
+
+# Save DataFrame to CSV file
+filtered_df.to_csv("/content/FILTEREDKENYASCREENS(onboarding)_CSV.csv", index=False)
+
+# Provide a link for downloading the CSV file
+files.download("/content/FILTEREDKENYASCREENS(onboarding)_CSV.csv")
